@@ -28,6 +28,7 @@ read, and every claim on the site traces back to an official legislative record.
 | Source data | LegiScan public API | Official New York legislative data, CC BY 4.0 |
 | Document cache | Cloudflare R2 (optional) | Keeps bill text out of Postgres and off LegiScan's servers |
 | Hosting | Vercel, including Vercel Cron | Free tier, one scheduled sync per day |
+| Search | App Router metadata, sitemap, robots, JSON-LD, `next/og` images | Server-rendered pages stay crawlable; preview deploys send `noindex` |
 
 No page render ever calls LegiScan. Pages read only this project's own database;
 the API is contacted exclusively by the scheduled sync.
@@ -117,6 +118,20 @@ real database or a running server:
 the database misbehaves. That safety net also hides SQL mistakes, so the same
 queries are re-run with errors in view.
 
+## Search and sharing
+
+Every public page is server-rendered with its own title, description, canonical
+URL and Open Graph card. Bill, topic, legislator and committee pages generate a
+unique 1200×630 image via `next/og`. Organization and page JSON-LD live in
+`lib/seo/`. `app/sitemap.ts` and `app/robots.ts` use the same origin as
+`metadataBase`.
+
+Set `NEXT_PUBLIC_SITE_URL` to the production domain (for example
+`https://www.risingtideyouthadvocacy.com`) so Google and social crawlers do not
+advertise the `*.vercel.app` URL. Preview deployments are `noindex`. Filtered
+bill and event URLs stay `follow` but are not indexed, so they do not compete
+with the clean listing pages.
+
 ## Architecture notes
 
 ```
@@ -124,6 +139,7 @@ app/          routes and API handlers (server components by default)
 components/   presentational components, grouped by domain
 config/       site configuration, topic definitions, water taxonomy
 lib/db/       schema, connection handling, query modules
+lib/seo/      titles, canonicals, Open Graph canvas, JSON-LD
 lib/legiscan/ API client, response schemas, quota accounting
 lib/sync/     the single ingestion service
 lib/classification/  the classifier and override resolution

@@ -5,16 +5,16 @@ import { NotYetSyncedState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/SectionHeader';
 import { listCommittees } from '@/lib/db/queries/committees';
 import { chamberLabel } from '@/lib/legiscan/enums';
+import { listingMetadata } from '@/lib/seo/metadata';
 import { formatDateShort } from '@/lib/utils/format';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Committees',
-  description:
-    'The New York State Senate and Assembly committees that decide whether water bills move forward.',
-  alternates: { canonical: '/committees' },
-};
+export const metadata: Metadata = listingMetadata(
+  'Committees',
+  'The New York State Senate and Assembly committees that decide whether water bills move forward.',
+  '/committees',
+);
 
 export default async function CommitteesPage() {
   const committees = await listCommittees();

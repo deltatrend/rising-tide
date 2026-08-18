@@ -9,11 +9,14 @@ import { PageHeader, SectionHeader } from '@/components/ui/SectionHeader';
 import { Stat, StatGrid } from '@/components/ui/Stat';
 import { BarChart, type BarChartRow } from '@/components/viz/BarChart';
 import { VoteBar } from '@/components/viz/VoteBar';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { getTopicDefinition } from '@/config/topics';
 import { getStatusDistribution, listBillsCompact } from '@/lib/db/queries/bills';
 import { getUpcomingEventsForTopic } from '@/lib/db/queries/events';
 import { getRecentVotesForTopic, listTopicSummaries } from '@/lib/db/queries/topics';
 import { describeStatus, STATUS_BUCKETS } from '@/lib/legiscan/enums';
+import { breadcrumbList, topicJsonLd } from '@/lib/seo/json-ld';
+import { shareImage, shareImagePath } from '@/lib/seo/metadata';
 import { formatDateShort, truncate } from '@/lib/utils/format';
 
 export const dynamic = 'force-dynamic';
@@ -37,6 +40,13 @@ export async function generateMetadata({
       title: topic.name,
       description: topic.shortDescription,
       url: `/topics/${slug}`,
+      images: [shareImage(`/topics/${slug}`, topic.name)],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: topic.name,
+      description: topic.shortDescription,
+      images: [shareImagePath(`/topics/${slug}`)],
     },
   };
 }
@@ -62,6 +72,16 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className="container">
+      <JsonLd
+        data={[
+          topicJsonLd({ slug, name: topic.name, description: topic.shortDescription }),
+          breadcrumbList([
+            { name: 'Home', path: '/' },
+            { name: 'Topics', path: '/topics' },
+            { name: topic.name, path: `/topics/${slug}` },
+          ]),
+        ]}
+      />
       <nav aria-label="Breadcrumb" className="text-small text-muted" style={{ marginBottom: '1rem' }}>
         <Link href="/topics">All topics</Link> <span aria-hidden="true">›</span> {topic.name}
       </nav>

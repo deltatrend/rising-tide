@@ -8,15 +8,32 @@ import { FreshnessIndicator } from '@/components/ui/FreshnessIndicator';
 import { PageHeader } from '@/components/ui/SectionHeader';
 import { getEventFacets, listEvents } from '@/lib/db/queries/events';
 import { getDataFreshness } from '@/lib/db/queries/stats';
+import { listingMetadata } from '@/lib/seo/metadata';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Hearings & events',
-  description:
-    'Committee hearings, floor sessions and public meetings involving the New York water bills we track.',
-  alternates: { canonical: '/events' },
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
+  const raw = await searchParams;
+  const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+  const past = first(raw.when) === 'past';
+  const filtered = Boolean(first(raw.type) || first(raw.topic));
+  const base = listingMetadata(
+    past ? 'Past hearings & events' : 'Hearings & events',
+    past
+      ? 'Recorded committee hearings and calendar entries for the New York water bills we track.'
+      : 'Committee hearings, floor sessions and public meetings involving the New York water bills we track.',
+    past ? '/events?when=past' : '/events',
+  );
+
+  return {
+    ...base,
+    robots: filtered ? { index: false, follow: true } : base.robots,
+  };
+}
 
 type EventSearchParams = { when?: string; type?: string; topic?: string };
 

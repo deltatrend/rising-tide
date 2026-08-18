@@ -13,16 +13,16 @@ import {
   getRecentSyncRuns,
   getSiteSnapshot,
 } from '@/lib/db/queries/stats';
+import { listingMetadata } from '@/lib/seo/metadata';
 import { formatNumber, formatTimestamp } from '@/lib/utils/format';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Methodology',
-  description:
-    'Where Rising Tide gets its data, how often it updates, how bills are selected as water policy, and what we do not know.',
-  alternates: { canonical: '/methodology' },
-};
+export const metadata: Metadata = listingMetadata(
+  'Methodology',
+  'Where Rising Tide gets its data, how often it updates, how bills are selected as water policy, and what we do not know.',
+  '/methodology',
+);
 
 export default async function MethodologyPage() {
   const [freshness, snapshot, usage, runs] = await Promise.all([

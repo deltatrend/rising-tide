@@ -5,15 +5,15 @@ import { NotYetSyncedState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/SectionHeader';
 import { listLegislators } from '@/lib/db/queries/legislators';
 import { partyLabel, roleLabel } from '@/lib/legiscan/enums';
+import { listingMetadata } from '@/lib/seo/metadata';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Legislators',
-  description:
-    'New York State senators and assembly members who sponsor or co-sponsor the water bills we track.',
-  alternates: { canonical: '/legislators' },
-};
+export const metadata: Metadata = listingMetadata(
+  'Legislators',
+  'New York State senators and assembly members who sponsor or co-sponsor the water bills we track.',
+  '/legislators',
+);
 
 export default async function LegislatorsPage() {
   const legislators = await listLegislators();

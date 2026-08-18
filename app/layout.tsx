@@ -2,7 +2,10 @@ import type { Metadata, Viewport } from 'next';
 
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { SiteHeader } from '@/components/layout/SiteHeader';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { getSiteUrl, shouldIndex, SITE } from '@/config/site';
+import { siteGraph } from '@/lib/seo/json-ld';
+import { shareImage } from '@/lib/seo/metadata';
 
 import './globals.css';
 
@@ -14,6 +17,9 @@ export const metadata: Metadata = {
   },
   description: SITE.description,
   applicationName: SITE.name,
+  authors: [{ name: SITE.founder }, { name: SITE.name }],
+  creator: SITE.founder,
+  publisher: SITE.name,
   keywords: [
     'New York water policy',
     'New York State legislation',
@@ -29,17 +35,27 @@ export const metadata: Metadata = {
     locale: 'en_US',
     title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
-    url: '/',
+    images: [shareImage('/', `${SITE.name} — ${SITE.tagline}`)],
   },
   twitter: {
     card: 'summary_large_image',
     title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
+    images: [shareImage('/', `${SITE.name} — ${SITE.tagline}`).url],
   },
   robots: shouldIndex()
-    ? { index: true, follow: true }
+    ? {
+        index: true,
+        follow: true,
+        googleBot: {
+          index: true,
+          follow: true,
+          'max-image-preview': 'large',
+          'max-snippet': -1,
+          'max-video-preview': -1,
+        },
+      }
     : { index: false, follow: false, nocache: true },
-  alternates: { canonical: '/' },
   category: 'government',
 };
 
@@ -56,6 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to main content
         </a>
         <SiteHeader />
+        <JsonLd data={siteGraph()} />
         <main id="main" className="site-main">
           {children}
         </main>

@@ -5,15 +5,15 @@ import { NotYetSyncedState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/SectionHeader';
 import { TOPIC_CATEGORIES } from '@/config/topics';
 import { listTopicSummaries } from '@/lib/db/queries/topics';
+import { listingMetadata } from '@/lib/seo/metadata';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Topics',
-  description:
-    'Water policy in New York, grouped into topics: drinking water, PFAS, wetlands, flooding, fisheries, Long Island Sound, the Great Lakes and more.',
-  alternates: { canonical: '/topics' },
-};
+export const metadata: Metadata = listingMetadata(
+  'Topics',
+  'Water policy in New York, grouped into topics: drinking water, PFAS, wetlands, flooding, fisheries, Long Island Sound, the Great Lakes and more.',
+  '/topics',
+);
 
 export default async function TopicsPage() {
   const topics = await listTopicSummaries();

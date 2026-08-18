@@ -1,10 +1,12 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/SectionHeader';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Page not found',
+  robots: { index: false, follow: true },
 };
 
 export default function NotFound() {

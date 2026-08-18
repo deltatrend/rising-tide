@@ -16,6 +16,8 @@ export const SITE = {
   missionHow:
     'We fulfill our mission through public outreach, advocacy and research to engage youth as stakeholders in the future of New York’s water systems.',
   founder: 'Phoebe Skinner',
+  founderSchool: 'Fox Lane High School',
+  founderPlace: 'Bedford, New York',
   locale: 'en-US',
   /** Used for structured data and the footer. */
   region: 'New York State',

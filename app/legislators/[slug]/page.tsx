@@ -2,11 +2,14 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { JsonLd } from '@/components/seo/JsonLd';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Callout } from '@/components/ui/Callout';
 import { PageHeader, SectionHeader } from '@/components/ui/SectionHeader';
 import { Stat, StatGrid } from '@/components/ui/Stat';
 import { getLegislatorBySlug } from '@/lib/db/queries/legislators';
+import { breadcrumbList, personJsonLd } from '@/lib/seo/json-ld';
+import { shareImage, shareImagePath } from '@/lib/seo/metadata';
 import { partyLabel, roleLabel, voteLabel } from '@/lib/legiscan/enums';
 import {
   asSentence,
@@ -28,10 +31,24 @@ export async function generateMetadata({
 
   if (!person) return { title: 'Legislator not found' };
 
+  const description = `Water bills sponsored, co-sponsored and voted on by ${person.name} in the New York State Legislature.`;
+
   return {
     title: person.name,
-    description: `Water bills sponsored, co-sponsored and voted on by ${person.name} in the New York State Legislature.`,
+    description,
     alternates: { canonical: `/legislators/${slug}` },
+    openGraph: {
+      title: person.name,
+      description,
+      url: `/legislators/${slug}`,
+      images: [shareImage(`/legislators/${slug}`, person.name)],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: person.name,
+      description,
+      images: [shareImagePath(`/legislators/${slug}`)],
+    },
   };
 }
 
@@ -46,6 +63,20 @@ export default async function LegislatorPage({ params }: { params: Promise<{ slu
 
   return (
     <div className="container">
+      <JsonLd
+        data={[
+          personJsonLd({
+            slug,
+            name: person.name,
+            description: `Water bills sponsored, co-sponsored and voted on by ${person.name}.`,
+          }),
+          breadcrumbList([
+            { name: 'Home', path: '/' },
+            { name: 'Legislators', path: '/legislators' },
+            { name: person.name, path: `/legislators/${slug}` },
+          ]),
+        ]}
+      />
       <nav aria-label="Breadcrumb" className="text-small text-muted" style={{ marginBottom: '1rem' }}>
         <Link href="/legislators">All legislators</Link> <span aria-hidden="true">›</span>{' '}
         {person.name}

@@ -1,24 +1,50 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { GetInvolved } from '@/components/about/GetInvolved';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { Callout } from '@/components/ui/Callout';
 import { PageHeader } from '@/components/ui/SectionHeader';
 import { ATTRIBUTION, getContactEmail, SITE } from '@/config/site';
+import { aboutPageJsonLd } from '@/lib/seo/json-ld';
+import { listingMetadata } from '@/lib/seo/metadata';
 
-export const metadata: Metadata = {
-  title: 'About & contact',
-  description: `${SITE.name} is a youth-led project that gets New York teens informed and talking about sustainable water systems.`,
-  alternates: { canonical: '/about' },
-};
+export const metadata: Metadata = listingMetadata(
+  'About & contact',
+  `${SITE.name} is a youth-led project that gets New York teens informed and talking about sustainable water systems.`,
+  '/about',
+);
 
 export default function AboutPage() {
   return (
     <div className="container">
+      <JsonLd data={aboutPageJsonLd()} />
       <PageHeader eyebrow="About & contact" title={SITE.name} lede={SITE.tagline} />
 
       <div className="split split-sidebar">
         <div className="prose">
+          <div className="founder">
+            <Image
+              className="founder__photo"
+              src="/phoebe-skinner.png"
+              alt={`${SITE.founder}, founder of ${SITE.name}`}
+              width={72}
+              height={72}
+            />
+            <div>
+              <h2 className="founder__name">{SITE.founder}</h2>
+              <p className="founder__lede">
+                Founder of {SITE.shortName}. A senior at {SITE.founderSchool} in {SITE.founderPlace}.
+              </p>
+              <p>
+                She started this as a youth-led effort to put New York teens in the conversation
+                about the water they will inherit. The tracker is one part of that work — alongside
+                public outreach, advocacy and research.
+              </p>
+            </div>
+          </div>
+
           <h2>Our mission</h2>
           <p>{SITE.mission}</p>
           <p>{SITE.missionHow}</p>
@@ -73,13 +99,6 @@ export default function AboutPage() {
               legislation that is already public.
             </p>
           </Callout>
-
-          <h2>Who started this</h2>
-          <p>
-            {SITE.name} was founded by {SITE.founder} as a youth-led effort to put New York teens in
-            the conversation about the water they will inherit. This tracker is one part of that
-            work — alongside public outreach, advocacy and research.
-          </p>
 
           <h2>How to use the tracker</h2>
           <p>

@@ -7,7 +7,7 @@
  */
 
 import type { BillFilters, BillSort } from '@/lib/db/queries/bills';
-import type { StatusBucket } from '@/lib/legiscan/enums';
+import { chamberLabel, STATUS_BUCKET_LABELS, type StatusBucket } from '@/lib/legiscan/enums';
 
 export type RawSearchParams = Record<string, string | string[] | undefined>;
 
@@ -136,4 +136,82 @@ export function describeFilters(
 
   if (parts.length === 0) return 'All tracked water bills';
   return `Water bills ${parts.join(', ')}`;
+}
+
+export interface ActiveFilterChip {
+  key: string;
+  label: string;
+  href: string;
+}
+
+/** Removable chips for the current query. Sort is not a filter. */
+export function listActiveFilters(
+  filters: BillFilters,
+  lookups: {
+    topicName?: string;
+    committeeName?: string;
+    sponsorName?: string;
+  } = {},
+  basePath = '/bills',
+): ActiveFilterChip[] {
+  const chips: ActiveFilterChip[] = [];
+
+  if (filters.q) {
+    chips.push({
+      key: 'q',
+      label: `“${filters.q}”`,
+      href: buildBillHref(basePath, filters, { q: null }),
+    });
+  }
+  if (filters.status) {
+    chips.push({
+      key: 'status',
+      label: STATUS_BUCKET_LABELS[filters.status],
+      href: buildBillHref(basePath, filters, { status: null }),
+    });
+  }
+  if (filters.chamber) {
+    chips.push({
+      key: 'chamber',
+      label: chamberLabel(filters.chamber),
+      href: buildBillHref(basePath, filters, { chamber: null }),
+    });
+  }
+  if (filters.topic) {
+    chips.push({
+      key: 'topic',
+      label: lookups.topicName ?? filters.topic,
+      href: buildBillHref(basePath, filters, { topic: null }),
+    });
+  }
+  if (filters.hasUpcomingEvent) {
+    chips.push({
+      key: 'event',
+      label: 'Upcoming hearing',
+      href: buildBillHref(basePath, filters, { hasUpcomingEvent: null }),
+    });
+  }
+  if (filters.hasVotes) {
+    chips.push({
+      key: 'votes',
+      label: 'Recorded vote',
+      href: buildBillHref(basePath, filters, { hasVotes: null }),
+    });
+  }
+  if (filters.committee) {
+    chips.push({
+      key: 'committee',
+      label: lookups.committeeName ?? filters.committee,
+      href: buildBillHref(basePath, filters, { committee: null }),
+    });
+  }
+  if (filters.sponsor) {
+    chips.push({
+      key: 'sponsor',
+      label: lookups.sponsorName ?? filters.sponsor,
+      href: buildBillHref(basePath, filters, { sponsor: null }),
+    });
+  }
+
+  return chips;
 }

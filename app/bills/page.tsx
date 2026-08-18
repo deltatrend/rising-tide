@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/ui/SectionHeader';
 import { Pagination } from '@/components/ui/Pagination';
 import { getBillFacets, listBills, DEFAULT_PER_PAGE } from '@/lib/db/queries/bills';
 import { getDataFreshness } from '@/lib/db/queries/stats';
+import { listingMetadata } from '@/lib/seo/metadata';
 import { formatNumber } from '@/lib/utils/format';
 import {
   buildBillHref,
@@ -19,12 +20,24 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Water bills',
-  description:
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<RawSearchParams>;
+}): Promise<Metadata> {
+  const filters = parseBillFilters(await searchParams);
+  const filtered = hasActiveFilters(filters) || (filters.page ?? 1) > 1;
+  const base = listingMetadata(
+    'Water bills',
     'Every New York State bill we track on oceans, drinking water, wetlands, flooding and water quality — filter by topic, stage, chamber, committee or sponsor.',
-  alternates: { canonical: '/bills' },
-};
+    '/bills',
+  );
+
+  return {
+    ...base,
+    robots: filtered ? { index: false, follow: true } : base.robots,
+  };
+}
 
 export default async function BillsPage({
   searchParams,
@@ -57,7 +70,7 @@ export default async function BillsPage({
   });
 
   return (
-    <div className="container">
+    <div className="container explorer">
       <PageHeader
         eyebrow="Legislation"
         title="Water bills"

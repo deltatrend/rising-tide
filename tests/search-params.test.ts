@@ -4,6 +4,7 @@ import {
   buildBillHref,
   describeFilters,
   hasActiveFilters,
+  listActiveFilters,
   parseBillFilters,
 } from '@/lib/utils/search-params';
 
@@ -123,5 +124,17 @@ describe('filter descriptions', () => {
     expect(description).toContain('Wetlands');
     expect(description).toContain('in committee');
     expect(description).toContain('Senate');
+  });
+
+  it('lists removable chips for each active filter', () => {
+    const chips = listActiveFilters(
+      parseBillFilters({ q: 'PFAS', status: 'early', chamber: 'S', topic: 'wetlands' }),
+      { topicName: 'Wetlands' },
+    );
+
+    expect(chips.map((chip) => chip.key)).toEqual(['q', 'status', 'chamber', 'topic']);
+    expect(chips.find((chip) => chip.key === 'topic')?.label).toBe('Wetlands');
+    expect(chips.find((chip) => chip.key === 'q')?.href).not.toContain('q=PFAS');
+    expect(chips.find((chip) => chip.key === 'q')?.href).toContain('topic=wetlands');
   });
 });

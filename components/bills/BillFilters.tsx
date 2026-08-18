@@ -3,21 +3,34 @@ import Link from 'next/link';
 import type { BillFacets, BillFilters as Filters } from '@/lib/db/queries/bills';
 import { chamberLabel, STATUS_BUCKET_LABELS, type StatusBucket } from '@/lib/legiscan/enums';
 import { formatNumber } from '@/lib/utils/format';
-import { buildBillHref, hasActiveFilters } from '@/lib/utils/search-params';
+import { buildBillHref, hasActiveFilters, listActiveFilters } from '@/lib/utils/search-params';
 
-const SORT_OPTIONS: { value: string; label: string }[] = [
-  { value: 'updated', label: 'Recently updated' },
-  { value: 'introduced', label: 'Newest' },
-  { value: 'relevance', label: 'Most relevant to water' },
-  { value: 'number', label: 'Bill number' },
+const SORT_OPTIONS: { value: string; label: string; short: string }[] = [
+  { value: 'updated', label: 'Recently updated', short: 'Updated' },
+  { value: 'introduced', label: 'Newest', short: 'Newest' },
+  { value: 'relevance', label: 'Most relevant to water', short: 'Relevant' },
+  { value: 'number', label: 'Bill number', short: 'Number' },
 ];
+
+const CLEAR_FILTERS = {
+  topic: null,
+  status: null,
+  chamber: null,
+  committee: null,
+  sponsor: null,
+  q: null,
+  since: null,
+  hasUpcomingEvent: null,
+  hasVotes: null,
+} as const;
 
 /**
  * Every filter is a link and search is a plain GET form.
  *
  * That keeps the whole explorer server-rendered: results are shareable and
  * crawlable, the back button behaves, and nothing breaks if JavaScript never
- * loads.
+ * loads. On small screens the facets sit behind a closed disclosure so the
+ * bill list is reachable without scrolling past every topic and sponsor.
  */
 export function BillFilters({
   filters,
@@ -29,6 +42,12 @@ export function BillFilters({
   basePath?: string;
 }) {
   const active = hasActiveFilters(filters);
+  const topicName = facets.topics.find((topic) => topic.slug === filters.topic)?.name;
+  const committeeName = facets.committees.find((committee) => committee.slug === filters.committee)
+    ?.name;
+  const sponsorName = facets.sponsors.find((sponsor) => sponsor.slug === filters.sponsor)?.name;
+  const chips = listActiveFilters(filters, { topicName, committeeName, sponsorName }, basePath);
+  const clearHref = buildBillHref(basePath, filters, CLEAR_FILTERS);
 
   return (
     <aside className="filters" aria-label="Filter bills">
@@ -44,7 +63,6 @@ export function BillFilters({
           placeholder="Bill number, keyword, sponsor…"
           autoComplete="off"
         />
-        {/* Preserve the rest of the filter state across a search submission. */}
         {filters.topic ? <input type="hidden" name="topic" value={filters.topic} /> : null}
         {filters.status ? <input type="hidden" name="status" value={filters.status} /> : null}
         {filters.chamber ? <input type="hidden" name="chamber" value={filters.chamber} /> : null}
@@ -58,131 +76,155 @@ export function BillFilters({
         </button>
       </form>
 
-      {active ? (
-        <p className="filters__clear">
-          <Link
-            href={buildBillHref(basePath, filters, {
-              topic: null,
-              status: null,
-              chamber: null,
-              committee: null,
-              sponsor: null,
-              q: null,
-              since: null,
-              hasUpcomingEvent: null,
-              hasVotes: null,
-            })}
-          >
-            Clear all filters
+      {chips.length > 0 ? (
+        <div className="filters__applied">
+          <ul className="filters__chips">
+            {chips.map((chip) => (
+              <li key={chip.key}>
+                <Link className="chip chip--selected" href={chip.href}>
+                  {chip.label} <span aria-hidden="true">×</span>
+                  <span className="visually-hidden"> (remove this filter)</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <Link className="filters__clear-link" href={clearHref}>
+            Clear all
           </Link>
-        </p>
+        </div>
       ) : null}
 
-      <FilterGroup title="Where it is">
-        {(['early', 'moving', 'passed', 'ended'] as StatusBucket[]).map((bucket) => {
-          const count = facets.statuses.find((s) => s.bucket === bucket)?.count ?? 0;
-          if (count === 0 && filters.status !== bucket) return null;
-          const selected = filters.status === bucket;
-          return (
+      <details className="filters__sheet">
+        <summary className="filters__sheet-summary">
+          <span>Filters</span>
+          {active ? (
+            <span className="filters__badge">{chips.length} selected</span>
+          ) : (
+            <span className="filters__sheet-hint">Stage, chamber, topic</span>
+          )}
+        </summary>
+
+        <div className="filters__sheet-body">
+          {active ? (
+            <p className="filters__clear">
+              <Link href={clearHref}>Clear all filters</Link>
+            </p>
+          ) : null}
+
+          <FilterGroup title="Stage">
+            {(['early', 'moving', 'passed', 'ended'] as StatusBucket[]).map((bucket) => {
+              const count = facets.statuses.find((status) => status.bucket === bucket)?.count ?? 0;
+              if (count === 0 && filters.status !== bucket) return null;
+              const selected = filters.status === bucket;
+              return (
+                <FilterOption
+                  key={bucket}
+                  href={buildBillHref(basePath, filters, { status: selected ? null : bucket })}
+                  label={STATUS_BUCKET_LABELS[bucket]}
+                  count={count}
+                  selected={selected}
+                />
+              );
+            })}
+          </FilterGroup>
+
+          {facets.chambers.length > 0 ? (
+            <FilterGroup title="Chamber">
+              {(['S', 'A'] as const).map((code) => {
+                const count = facets.chambers
+                  .filter((chamber) =>
+                    code === 'A' ? chamber.code === 'A' || chamber.code === 'H' : chamber.code === 'S',
+                  )
+                  .reduce((sum, chamber) => sum + chamber.count, 0);
+                if (count === 0 && filters.chamber !== code) return null;
+                const selected = filters.chamber === code;
+                return (
+                  <FilterOption
+                    key={code}
+                    href={buildBillHref(basePath, filters, { chamber: selected ? null : code })}
+                    label={chamberLabel(code)}
+                    count={count}
+                    selected={selected}
+                  />
+                );
+              })}
+            </FilterGroup>
+          ) : null}
+
+          {facets.topics.length > 0 ? (
+            <FilterGroup
+              title="Topic"
+              collapsible
+              defaultOpen={Boolean(filters.topic)}
+              preferOpen
+            >
+              {facets.topics.map((topic) => {
+                const selected = filters.topic === topic.slug;
+                return (
+                  <FilterOption
+                    key={topic.slug}
+                    href={buildBillHref(basePath, filters, { topic: selected ? null : topic.slug })}
+                    label={topic.name}
+                    count={topic.count}
+                    selected={selected}
+                  />
+                );
+              })}
+            </FilterGroup>
+          ) : null}
+
+          <FilterGroup title="Activity" collapsible defaultOpen={Boolean(filters.hasUpcomingEvent || filters.hasVotes)}>
             <FilterOption
-              key={bucket}
-              href={buildBillHref(basePath, filters, { status: selected ? null : bucket })}
-              label={STATUS_BUCKET_LABELS[bucket]}
-              count={count}
-              selected={selected}
+              href={buildBillHref(basePath, filters, {
+                hasUpcomingEvent: filters.hasUpcomingEvent ? null : true,
+              })}
+              label="Has an upcoming hearing"
+              selected={Boolean(filters.hasUpcomingEvent)}
             />
-          );
-        })}
-      </FilterGroup>
+            <FilterOption
+              href={buildBillHref(basePath, filters, { hasVotes: filters.hasVotes ? null : true })}
+              label="Has a recorded vote"
+              selected={Boolean(filters.hasVotes)}
+            />
+          </FilterGroup>
 
-      {facets.chambers.length > 0 ? (
-        <FilterGroup title="Chamber">
-          {(['S', 'A'] as const).map((code) => {
-            const count = facets.chambers
-              .filter((c) => (code === 'A' ? c.code === 'A' || c.code === 'H' : c.code === 'S'))
-              .reduce((sum, c) => sum + c.count, 0);
-            if (count === 0 && filters.chamber !== code) return null;
-            const selected = filters.chamber === code;
-            return (
-              <FilterOption
-                key={code}
-                href={buildBillHref(basePath, filters, { chamber: selected ? null : code })}
-                label={chamberLabel(code)}
-                count={count}
-                selected={selected}
-              />
-            );
-          })}
-        </FilterGroup>
-      ) : null}
+          {facets.committees.length > 0 ? (
+            <FilterGroup title="Committee" collapsible defaultOpen={Boolean(filters.committee)}>
+              {facets.committees.slice(0, 25).map((committee) => {
+                const selected = filters.committee === committee.slug;
+                return (
+                  <FilterOption
+                    key={committee.slug}
+                    href={buildBillHref(basePath, filters, {
+                      committee: selected ? null : committee.slug,
+                    })}
+                    label={committee.name}
+                    count={committee.count}
+                    selected={selected}
+                  />
+                );
+              })}
+            </FilterGroup>
+          ) : null}
 
-      {facets.topics.length > 0 ? (
-        <FilterGroup title="Topic">
-          {facets.topics.map((topic) => {
-            const selected = filters.topic === topic.slug;
-            return (
-              <FilterOption
-                key={topic.slug}
-                href={buildBillHref(basePath, filters, { topic: selected ? null : topic.slug })}
-                label={topic.name}
-                count={topic.count}
-                selected={selected}
-              />
-            );
-          })}
-        </FilterGroup>
-      ) : null}
-
-      <FilterGroup title="Activity">
-        <FilterOption
-          href={buildBillHref(basePath, filters, {
-            hasUpcomingEvent: filters.hasUpcomingEvent ? null : true,
-          })}
-          label="Has an upcoming hearing"
-          selected={Boolean(filters.hasUpcomingEvent)}
-        />
-        <FilterOption
-          href={buildBillHref(basePath, filters, { hasVotes: filters.hasVotes ? null : true })}
-          label="Has a recorded vote"
-          selected={Boolean(filters.hasVotes)}
-        />
-      </FilterGroup>
-
-      {facets.committees.length > 0 ? (
-        <FilterGroup title="Committee" collapsible defaultOpen={Boolean(filters.committee)}>
-          {facets.committees.slice(0, 25).map((committee) => {
-            const selected = filters.committee === committee.slug;
-            return (
-              <FilterOption
-                key={committee.slug}
-                href={buildBillHref(basePath, filters, {
-                  committee: selected ? null : committee.slug,
-                })}
-                label={committee.name}
-                count={committee.count}
-                selected={selected}
-              />
-            );
-          })}
-        </FilterGroup>
-      ) : null}
-
-      {facets.sponsors.length > 0 ? (
-        <FilterGroup title="Lead sponsor" collapsible defaultOpen={Boolean(filters.sponsor)}>
-          {facets.sponsors.slice(0, 25).map((sponsor) => {
-            const selected = filters.sponsor === sponsor.slug;
-            return (
-              <FilterOption
-                key={sponsor.slug}
-                href={buildBillHref(basePath, filters, { sponsor: selected ? null : sponsor.slug })}
-                label={sponsor.name}
-                count={sponsor.count}
-                selected={selected}
-              />
-            );
-          })}
-        </FilterGroup>
-      ) : null}
+          {facets.sponsors.length > 0 ? (
+            <FilterGroup title="Lead sponsor" collapsible defaultOpen={Boolean(filters.sponsor)}>
+              {facets.sponsors.slice(0, 25).map((sponsor) => {
+                const selected = filters.sponsor === sponsor.slug;
+                return (
+                  <FilterOption
+                    key={sponsor.slug}
+                    href={buildBillHref(basePath, filters, { sponsor: selected ? null : sponsor.slug })}
+                    label={sponsor.name}
+                    count={sponsor.count}
+                    selected={selected}
+                  />
+                );
+              })}
+            </FilterGroup>
+          ) : null}
+        </div>
+      </details>
     </aside>
   );
 }
@@ -209,7 +251,8 @@ export function BillSortControls({
                 href={buildBillHref(basePath, filters, { sort: option.value })}
                 aria-current={selected ? 'true' : undefined}
               >
-                {option.label}
+                <span className="sort-label sort-label--full">{option.label}</span>
+                <span className="sort-label sort-label--short">{option.short}</span>
               </Link>
             </li>
           );
@@ -224,15 +267,20 @@ function FilterGroup({
   children,
   collapsible = false,
   defaultOpen = false,
+  preferOpen = false,
 }: {
   title: string;
   children: React.ReactNode;
   collapsible?: boolean;
   defaultOpen?: boolean;
+  preferOpen?: boolean;
 }) {
   if (collapsible) {
     return (
-      <details className="filters__group" open={defaultOpen}>
+      <details
+        className={`filters__group${preferOpen ? ' filters__group--prefer-open' : ''}`}
+        open={defaultOpen}
+      >
         <summary className="filters__label">{title}</summary>
         <ul className="filters__options">{children}</ul>
       </details>

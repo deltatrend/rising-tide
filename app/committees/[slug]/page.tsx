@@ -3,11 +3,14 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { EventCard } from '@/components/events/EventCard';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Callout } from '@/components/ui/Callout';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader, SectionHeader } from '@/components/ui/SectionHeader';
 import { getCommitteeBySlug } from '@/lib/db/queries/committees';
+import { breadcrumbList, committeeJsonLd } from '@/lib/seo/json-ld';
+import { shareImage, shareImagePath } from '@/lib/seo/metadata';
 import { getUpcomingEventsForCommittee } from '@/lib/db/queries/events';
 import { chamberLabel } from '@/lib/legiscan/enums';
 import { asSentence, formatDate, formatDateShort, tidyBillNumber, truncate } from '@/lib/utils/format';
@@ -24,10 +27,24 @@ export async function generateMetadata({
 
   if (!committee) return { title: 'Committee not found' };
 
+  const description = `Water bills currently before the ${committee.name} committee in the New York State Legislature.`;
+
   return {
     title: committee.name,
-    description: `Water bills currently before the ${committee.name} committee in the New York State Legislature.`,
+    description,
     alternates: { canonical: `/committees/${slug}` },
+    openGraph: {
+      title: committee.name,
+      description,
+      url: `/committees/${slug}`,
+      images: [shareImage(`/committees/${slug}`, committee.name)],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: committee.name,
+      description,
+      images: [shareImagePath(`/committees/${slug}`)],
+    },
   };
 }
 
@@ -42,6 +59,20 @@ export default async function CommitteePage({ params }: { params: Promise<{ slug
 
   return (
     <div className="container">
+      <JsonLd
+        data={[
+          committeeJsonLd({
+            slug,
+            name: committee.name,
+            description: `Water bills referred to the ${committee.name}.`,
+          }),
+          breadcrumbList([
+            { name: 'Home', path: '/' },
+            { name: 'Committees', path: '/committees' },
+            { name: committee.name, path: `/committees/${slug}` },
+          ]),
+        ]}
+      />
       <nav aria-label="Breadcrumb" className="text-small text-muted" style={{ marginBottom: '1rem' }}>
         <Link href="/committees">All committees</Link> <span aria-hidden="true">›</span>{' '}
         {committee.name}

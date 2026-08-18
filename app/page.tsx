@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { BillCard, BillLine } from '@/components/bills/BillCard';
@@ -11,6 +12,7 @@ import { BarChart, type BarChartRow } from '@/components/viz/BarChart';
 import { ColumnChart, type ColumnPoint } from '@/components/viz/ColumnChart';
 import { VoteBar } from '@/components/viz/VoteBar';
 import { SITE } from '@/config/site';
+import { listingMetadata } from '@/lib/seo/metadata';
 import {
   getActivityByMonth,
   getRecentlyChanged,
@@ -30,6 +32,11 @@ import { displayTitle, formatDateShort, formatRelative, truncate } from '@/lib/u
 // rendering keeps "upcoming", "recently changed" and freshness honest, and it
 // means a deployment never depends on the database being reachable at build.
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  ...listingMetadata(SITE.tagline, SITE.description, '/'),
+  title: { absolute: `${SITE.name} — ${SITE.tagline}` },
+};
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 

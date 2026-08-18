@@ -7,6 +7,7 @@ import { SponsorLine } from '@/components/bills/BillCard';
 import { Callout } from '@/components/ui/Callout';
 import { FixtureBadge, StatusBadge } from '@/components/ui/Badge';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { ShareControls } from '@/components/ui/ShareControls';
 import { StatusTrack } from '@/components/viz/StatusTrack';
 import { VoteBar, VoteRoster } from '@/components/viz/VoteBar';
@@ -37,6 +38,8 @@ import {
   tidyBillNumber,
   truncate,
 } from '@/lib/utils/format';
+import { billJsonLd, breadcrumbList } from '@/lib/seo/json-ld';
+import { shareImage, shareImagePath } from '@/lib/seo/metadata';
 import { describeProgress } from '@/lib/utils/stages';
 
 export const dynamic = 'force-dynamic';
@@ -54,9 +57,9 @@ export async function generateMetadata({
   }
 
   const number = tidyBillNumber(detail.bill.billNumber);
-  const title = `${number}: ${truncate(asSentence(detail.bill.title), 70)}`;
+  const title = `${number}: ${displayTitle(detail.bill.title, 70)}`;
   const description = truncate(
-    asSentence(detail.bill.description ?? detail.bill.title),
+    asSentence(detail.bill.description ?? officialShortTitle(detail.bill.title)),
     180,
   );
 
@@ -69,8 +72,16 @@ export async function generateMetadata({
       title: `${title} · ${SITE.shortName}`,
       description,
       url: `/bills/${slug}`,
+      publishedTime: detail.bill.introducedOn ?? undefined,
+      modifiedTime: detail.bill.lastActionDate ?? undefined,
+      images: [shareImage(`/bills/${slug}`, title)],
     },
-    twitter: { card: 'summary', title, description },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [shareImagePath(`/bills/${slug}`)],
+    },
   };
 }
 
@@ -89,6 +100,24 @@ export default async function BillPage({ params }: { params: Promise<{ slug: str
 
   return (
     <div className="container">
+      <JsonLd
+        data={[
+          billJsonLd({
+            slug,
+            billNumber: number,
+            title: officialShortTitle(bill.title),
+            description: asSentence(bill.description ?? officialShortTitle(bill.title)),
+            introducedOn: bill.introducedOn,
+            statusLabel: status.label,
+            sponsorName: detail.sponsors[0]?.name,
+          }),
+          breadcrumbList([
+            { name: 'Home', path: '/' },
+            { name: 'Bills', path: '/bills' },
+            { name: number, path: `/bills/${slug}` },
+          ]),
+        ]}
+      />
       <nav aria-label="Breadcrumb" className="text-small text-muted" style={{ marginBottom: '1rem' }}>
         <Link href="/bills">All water bills</Link> <span aria-hidden="true">›</span> {number}
       </nav>
