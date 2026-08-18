@@ -469,6 +469,7 @@ hr {
   padding: 1.35rem 1.35rem 1.5rem;
   position: sticky;
   top: 5.5rem;
+  align-self: start;
 }
 
 .involve__eyebrow {
@@ -1176,31 +1177,55 @@ hr {
   align-content: start;
 }
 
-.filters__search {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.45rem 0.5rem;
-  align-items: end;
+.search-bar {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 34rem;
+  margin-bottom: 1.75rem;
 }
 
-.filters__search .filters__label {
-  grid-column: 1 / -1;
-  margin-bottom: 0;
-}
-
-.filters__search input {
-  width: 100%;
-  padding: 0.5rem 0.65rem;
+.search-bar input {
+  flex: 1 1 auto;
+  /* Without this a flex item refuses to shrink below its placeholder width. */
+  min-width: 0;
+  padding: 0.6rem 0.85rem;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   background: var(--surface);
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   color: var(--ink);
 }
 
-.filters__search input:focus {
+.search-bar input::placeholder {
+  color: var(--muted-light);
+}
+
+.search-bar input:focus {
   border-color: var(--tide);
+}
+
+.search-bar .button {
+  flex: none;
+}
+
+/* The button stays beside the field at every width, so on the narrowest phones
+   claw back room for the placeholder rather than wrapping it below. */
+@media (max-width: 26rem) {
+  .search-bar {
+    gap: 0.4rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .search-bar input {
+    padding-left: 0.65rem;
+    padding-right: 0.65rem;
+  }
+
+  .search-bar .button {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
 }
 
 .filters__label {
@@ -1213,18 +1238,71 @@ hr {
   margin: 0 0 0.4rem;
 }
 
+/* Symmetric padding rather than a gap between groups, so a collapsed row sits
+   centred between its own rule and the next one. */
 .filters__group {
   border-top: 1px solid var(--line);
-  padding-top: 1rem;
+  padding: 0.85rem 0;
+}
+
+.filters__group[open] {
+  padding-bottom: 1.1rem;
 }
 
 .filters__group > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1.75rem;
   cursor: pointer;
+  margin-bottom: 0;
+  list-style: none;
+}
+
+.filters__group[open] > summary {
   margin-bottom: 0.4rem;
 }
 
-.filters__group > summary::marker {
+.filters__group > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* A summary with `display: flex` loses the native disclosure triangle. */
+.filters__group > summary::after {
+  content: '';
+  width: 0.42rem;
+  height: 0.42rem;
+  flex: none;
+  margin-left: auto;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  /* The rotated square hangs low on its own; shift it back onto the text baseline. */
+  transform: translateY(-25%) rotate(45deg);
+}
+
+.filters__group[open] > summary::after {
+  transform: translateY(25%) rotate(-135deg);
+}
+
+.filters__group > summary:hover {
+  color: var(--ink);
+}
+
+.filters__group > summary:hover::after {
+  border-color: var(--tide);
+}
+
+.filters__group-title {
+  line-height: 1;
+}
+
+.filters__group-count {
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
   color: var(--muted-light);
+  font-variant-numeric: tabular-nums;
 }
 
 .filters__options {
@@ -1319,15 +1397,16 @@ hr {
 
 .filters__sheet-body {
   display: grid;
-  gap: 1.15rem;
-  padding: 0 0.95rem 1rem;
+  padding: 0.35rem 0.95rem 0.85rem;
   border-top: 1px solid var(--line);
 }
 
-.filters__sheet-body > .filters__group:first-child,
-.filters__sheet-body > .filters__clear + .filters__group {
+.filters__sheet-body > .filters__clear {
+  margin: 0.5rem 0;
+}
+
+.filters__sheet-body > .filters__group:first-child {
   border-top: none;
-  padding-top: 0.15rem;
 }
 
 .sort-label--short {
@@ -1396,22 +1475,12 @@ hr {
 
   .filters__sheet-body {
     display: grid !important;
-    gap: 1.4rem;
     padding: 0;
     border: none;
   }
 
-  .filters__group--prefer-open > .filters__options {
-    display: grid !important;
-  }
-
-  .filters__group--prefer-open > summary {
-    pointer-events: none;
-    list-style: none;
-  }
-
-  .filters__group--prefer-open > summary::-webkit-details-marker {
-    display: none;
+  .filters__sheet-body > .filters__group:first-child {
+    padding-top: 0;
   }
 }
 

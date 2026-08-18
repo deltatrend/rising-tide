@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 import { BillCard } from '@/components/bills/BillCard';
-import { BillFilters, BillSortControls } from '@/components/bills/BillFilters';
+import { BillFilters, BillSearch, BillSortControls } from '@/components/bills/BillFilters';
 import { NoResultsState, NotYetSyncedState } from '@/components/ui/EmptyState';
 import { FreshnessIndicator } from '@/components/ui/FreshnessIndicator';
 import { PageHeader } from '@/components/ui/SectionHeader';
@@ -84,49 +84,53 @@ export default async function BillsPage({
       {!freshness.hasSyncedEver && result.total === 0 ? (
         <NotYetSyncedState what="bills" />
       ) : (
-        <div className="split split-filters">
-          <BillFilters filters={filters} facets={facets} />
+        <>
+          <BillSearch filters={filters} />
 
-          <div>
-            <div className="cluster-between" style={{ marginBottom: '1rem' }}>
-              <h2 style={{ margin: 0, fontSize: '1.1rem' }}>
-                {summary}
-                <span className="text-muted" style={{ fontWeight: 400 }}>
-                  {' '}
-                  · {formatNumber(result.total)} {result.total === 1 ? 'bill' : 'bills'}
-                </span>
-              </h2>
-            </div>
+          <div className="split split-filters">
+            <BillFilters filters={filters} facets={facets} />
 
-            <BillSortControls filters={filters} />
+            <div>
+              <div className="cluster-between" style={{ marginBottom: '1rem' }}>
+                <h2 style={{ margin: 0, fontSize: '1.1rem' }}>
+                  {summary}
+                  <span className="text-muted" style={{ fontWeight: 400 }}>
+                    {' '}
+                    · {formatNumber(result.total)} {result.total === 1 ? 'bill' : 'bills'}
+                  </span>
+                </h2>
+              </div>
 
-            {result.items.length === 0 ? (
-              hasActiveFilters(filters) ? (
-                <NoResultsState resetHref={resetHref} />
+              <BillSortControls filters={filters} />
+
+              {result.items.length === 0 ? (
+                hasActiveFilters(filters) ? (
+                  <NoResultsState resetHref={resetHref} />
+                ) : (
+                  <NotYetSyncedState what="bills" />
+                )
               ) : (
-                <NotYetSyncedState what="bills" />
-              )
-            ) : (
-              <>
-                <ul className="bill-list">
-                  {result.items.map((bill) => (
-                    <li key={bill.slug}>
-                      <BillCard bill={bill} />
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <ul className="bill-list">
+                    {result.items.map((bill) => (
+                      <li key={bill.slug}>
+                        <BillCard bill={bill} />
+                      </li>
+                    ))}
+                  </ul>
 
-                <Pagination
-                  page={result.page}
-                  totalPages={result.totalPages}
-                  total={result.total}
-                  perPage={result.perPage}
-                  buildHref={(page) => buildBillHref('/bills', filters, { page })}
-                />
-              </>
-            )}
+                  <Pagination
+                    page={result.page}
+                    totalPages={result.totalPages}
+                    total={result.total}
+                    perPage={result.perPage}
+                    buildHref={(page) => buildBillHref('/bills', filters, { page })}
+                  />
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

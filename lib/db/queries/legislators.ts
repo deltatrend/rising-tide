@@ -15,6 +15,8 @@ import { col, tbl } from './sql-helpers';
 export interface LegislatorSummary {
   slug: string;
   name: string;
+  /** Kept separate so an A–Z sort orders by surname, as a directory should. */
+  lastName: string | null;
   party: string | null;
   partyId: number | null;
   role: string | null;
@@ -31,6 +33,7 @@ export async function listLegislators(): Promise<LegislatorSummary[]> {
         .select({
           slug: people.slug,
           name: people.name,
+          lastName: people.lastName,
           party: people.party,
           partyId: people.partyId,
           role: people.role,

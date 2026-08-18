@@ -56,16 +56,32 @@ export default async function EventsPage({
   const first = (value: string | string[] | undefined) =>
     Array.isArray(value) ? value[0] : value;
 
-  const when = first(raw.when) === 'past' ? 'past' : 'upcoming';
+  const rawWhen = first(raw.when);
+  const explicitWhen = rawWhen === 'past' ? 'past' : rawWhen === 'upcoming' ? 'upcoming' : undefined;
   const eventType = first(raw.type);
   const topic = first(raw.topic);
-  const current: EventSearchParams = { when, type: eventType, topic };
 
-  const [events, facets, freshness] = await Promise.all([
-    listEvents({ when, eventType, topic, limit: 100 }),
-    getEventFacets(when),
+  const [firstPass, firstPassFacets, freshness] = await Promise.all([
+    listEvents({ when: explicitWhen ?? 'upcoming', eventType, topic, limit: 100 }),
+    getEventFacets(explicitWhen ?? 'upcoming'),
     getDataFreshness(),
   ]);
+
+  // Out of session there is nothing upcoming, and an empty default tab reads as
+  // a broken page. Land on Past instead — but only when the visitor did not ask
+  // for a window themselves, so an explicit ?when=upcoming still holds.
+  const fellBackToPast =
+    !explicitWhen && firstPassFacets.upcomingCount === 0 && firstPassFacets.pastCount > 0;
+  const when = fellBackToPast ? 'past' : (explicitWhen ?? 'upcoming');
+
+  const [events, facets] = fellBackToPast
+    ? await Promise.all([
+        listEvents({ when, eventType, topic, limit: 100 }),
+        getEventFacets(when),
+      ])
+    : [firstPass, firstPassFacets];
+
+  const current: EventSearchParams = { when, type: eventType, topic };
 
   // A filter that cannot change the result is noise: when every event in this
   // window is a hearing, "Hearing (46)" just re-renders the same 46 rows. An
@@ -91,7 +107,7 @@ export default async function EventsPage({
         </p>
       </PageHeader>
 
-      <div className="cluster" style={{ marginBottom: '1.5rem' }}>
+      <div className="cluster" style={{ marginBottom: fellBackToPast ? '0.85rem' : '1.5rem' }}>
         <Link
           className={`chip${when === 'upcoming' ? ' chip--selected' : ''}`}
           href={buildHref(current, { when: 'upcoming' })}
@@ -126,6 +142,13 @@ export default async function EventsPage({
           </Link>
         ) : null}
       </div>
+
+      {fellBackToPast ? (
+        <p className="text-muted" style={{ marginTop: 0, marginBottom: '1.5rem' }}>
+          No tracked water bill is on the legislative calendar right now, so this is showing past
+          hearings.
+        </p>
+      ) : null}
 
       {events.length > 0 ? (
         <div className="stack">

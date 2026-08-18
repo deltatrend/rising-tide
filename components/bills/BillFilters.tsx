@@ -25,6 +25,47 @@ const CLEAR_FILTERS = {
 } as const;
 
 /**
+ * Search sits above the results rather than inside the filter rail, which is
+ * too narrow to show the placeholder in full. Submitting carries the active
+ * facets along as hidden inputs so searching narrows the current view instead
+ * of resetting it.
+ */
+export function BillSearch({
+  filters,
+  basePath = '/bills',
+}: {
+  filters: Filters;
+  basePath?: string;
+}) {
+  return (
+    <form className="search-bar" action={basePath} method="get" role="search">
+      <label htmlFor="bill-search" className="visually-hidden">
+        Search bills
+      </label>
+      <input
+        id="bill-search"
+        type="search"
+        name="q"
+        defaultValue={filters.q ?? ''}
+        placeholder="Bill number, keyword, sponsor…"
+        autoComplete="off"
+      />
+      {filters.topic ? <input type="hidden" name="topic" value={filters.topic} /> : null}
+      {filters.status ? <input type="hidden" name="status" value={filters.status} /> : null}
+      {filters.chamber ? <input type="hidden" name="chamber" value={filters.chamber} /> : null}
+      {filters.committee ? <input type="hidden" name="committee" value={filters.committee} /> : null}
+      {filters.sponsor ? <input type="hidden" name="sponsor" value={filters.sponsor} /> : null}
+      {filters.sort && filters.sort !== 'updated' ? (
+        <input type="hidden" name="sort" value={filters.sort} />
+      ) : null}
+      <button type="submit" className="button">
+        Search
+      </button>
+    </form>
+  );
+}
+
+/**
  * Every filter is a link and search is a plain GET form.
  *
  * That keeps the whole explorer server-rendered: results are shareable and
@@ -49,33 +90,30 @@ export function BillFilters({
   const chips = listActiveFilters(filters, { topicName, committeeName, sponsorName }, basePath);
   const clearHref = buildBillHref(basePath, filters, CLEAR_FILTERS);
 
+  // Resolved up front so each group header can state how many options it holds.
+  const statusOptions = (['early', 'moving', 'passed', 'ended'] as StatusBucket[])
+    .map((bucket) => ({
+      bucket,
+      count: facets.statuses.find((status) => status.bucket === bucket)?.count ?? 0,
+    }))
+    .filter(({ bucket, count }) => count > 0 || filters.status === bucket);
+
+  const chamberOptions = (['S', 'A'] as const)
+    .map((code) => ({
+      code,
+      count: facets.chambers
+        .filter((chamber) =>
+          code === 'A' ? chamber.code === 'A' || chamber.code === 'H' : chamber.code === 'S',
+        )
+        .reduce((sum, chamber) => sum + chamber.count, 0),
+    }))
+    .filter(({ code, count }) => count > 0 || filters.chamber === code);
+
+  const committeeOptions = facets.committees.slice(0, 25);
+  const sponsorOptions = facets.sponsors.slice(0, 25);
+
   return (
     <aside className="filters" aria-label="Filter bills">
-      <form className="filters__search" action={basePath} method="get" role="search">
-        <label htmlFor="bill-search" className="filters__label">
-          Search
-        </label>
-        <input
-          id="bill-search"
-          type="search"
-          name="q"
-          defaultValue={filters.q ?? ''}
-          placeholder="Bill number, keyword, sponsor…"
-          autoComplete="off"
-        />
-        {filters.topic ? <input type="hidden" name="topic" value={filters.topic} /> : null}
-        {filters.status ? <input type="hidden" name="status" value={filters.status} /> : null}
-        {filters.chamber ? <input type="hidden" name="chamber" value={filters.chamber} /> : null}
-        {filters.committee ? <input type="hidden" name="committee" value={filters.committee} /> : null}
-        {filters.sponsor ? <input type="hidden" name="sponsor" value={filters.sponsor} /> : null}
-        {filters.sort && filters.sort !== 'updated' ? (
-          <input type="hidden" name="sort" value={filters.sort} />
-        ) : null}
-        <button type="submit" className="button button--small">
-          Search
-        </button>
-      </form>
-
       {chips.length > 0 ? (
         <div className="filters__applied">
           <ul className="filters__chips">
@@ -111,32 +149,26 @@ export function BillFilters({
             </p>
           ) : null}
 
-          <FilterGroup title="Stage">
-            {(['early', 'moving', 'passed', 'ended'] as StatusBucket[]).map((bucket) => {
-              const count = facets.statuses.find((status) => status.bucket === bucket)?.count ?? 0;
-              if (count === 0 && filters.status !== bucket) return null;
-              const selected = filters.status === bucket;
-              return (
-                <FilterOption
-                  key={bucket}
-                  href={buildBillHref(basePath, filters, { status: selected ? null : bucket })}
-                  label={STATUS_BUCKET_LABELS[bucket]}
-                  count={count}
-                  selected={selected}
-                />
-              );
-            })}
-          </FilterGroup>
+          {statusOptions.length > 0 ? (
+            <FilterGroup title="Stage" optionCount={statusOptions.length} defaultOpen>
+              {statusOptions.map(({ bucket, count }) => {
+                const selected = filters.status === bucket;
+                return (
+                  <FilterOption
+                    key={bucket}
+                    href={buildBillHref(basePath, filters, { status: selected ? null : bucket })}
+                    label={STATUS_BUCKET_LABELS[bucket]}
+                    count={count}
+                    selected={selected}
+                  />
+                );
+              })}
+            </FilterGroup>
+          ) : null}
 
-          {facets.chambers.length > 0 ? (
-            <FilterGroup title="Chamber">
-              {(['S', 'A'] as const).map((code) => {
-                const count = facets.chambers
-                  .filter((chamber) =>
-                    code === 'A' ? chamber.code === 'A' || chamber.code === 'H' : chamber.code === 'S',
-                  )
-                  .reduce((sum, chamber) => sum + chamber.count, 0);
-                if (count === 0 && filters.chamber !== code) return null;
+          {chamberOptions.length > 0 ? (
+            <FilterGroup title="Chamber" optionCount={chamberOptions.length} defaultOpen>
+              {chamberOptions.map(({ code, count }) => {
                 const selected = filters.chamber === code;
                 return (
                   <FilterOption
@@ -152,12 +184,7 @@ export function BillFilters({
           ) : null}
 
           {facets.topics.length > 0 ? (
-            <FilterGroup
-              title="Topic"
-              collapsible
-              defaultOpen={Boolean(filters.topic)}
-              preferOpen
-            >
+            <FilterGroup title="Topic" optionCount={facets.topics.length} defaultOpen>
               {facets.topics.map((topic) => {
                 const selected = filters.topic === topic.slug;
                 return (
@@ -173,7 +200,7 @@ export function BillFilters({
             </FilterGroup>
           ) : null}
 
-          <FilterGroup title="Activity" collapsible defaultOpen={Boolean(filters.hasUpcomingEvent || filters.hasVotes)}>
+          <FilterGroup title="Activity" optionCount={2} defaultOpen>
             <FilterOption
               href={buildBillHref(basePath, filters, {
                 hasUpcomingEvent: filters.hasUpcomingEvent ? null : true,
@@ -188,9 +215,13 @@ export function BillFilters({
             />
           </FilterGroup>
 
-          {facets.committees.length > 0 ? (
-            <FilterGroup title="Committee" collapsible defaultOpen={Boolean(filters.committee)}>
-              {facets.committees.slice(0, 25).map((committee) => {
+          {committeeOptions.length > 0 ? (
+            <FilterGroup
+              title="Committee"
+              optionCount={committeeOptions.length}
+              defaultOpen={Boolean(filters.committee)}
+            >
+              {committeeOptions.map((committee) => {
                 const selected = filters.committee === committee.slug;
                 return (
                   <FilterOption
@@ -207,9 +238,13 @@ export function BillFilters({
             </FilterGroup>
           ) : null}
 
-          {facets.sponsors.length > 0 ? (
-            <FilterGroup title="Lead sponsor" collapsible defaultOpen={Boolean(filters.sponsor)}>
-              {facets.sponsors.slice(0, 25).map((sponsor) => {
+          {sponsorOptions.length > 0 ? (
+            <FilterGroup
+              title="Lead sponsor"
+              optionCount={sponsorOptions.length}
+              defaultOpen={Boolean(filters.sponsor)}
+            >
+              {sponsorOptions.map((sponsor) => {
                 const selected = filters.sponsor === sponsor.slug;
                 return (
                   <FilterOption
@@ -265,33 +300,27 @@ export function BillSortControls({
 function FilterGroup({
   title,
   children,
-  collapsible = false,
   defaultOpen = false,
-  preferOpen = false,
+  optionCount,
 }: {
   title: string;
   children: React.ReactNode;
-  collapsible?: boolean;
   defaultOpen?: boolean;
-  preferOpen?: boolean;
+  optionCount?: number;
 }) {
-  if (collapsible) {
-    return (
-      <details
-        className={`filters__group${preferOpen ? ' filters__group--prefer-open' : ''}`}
-        open={defaultOpen}
-      >
-        <summary className="filters__label">{title}</summary>
-        <ul className="filters__options">{children}</ul>
-      </details>
-    );
-  }
-
   return (
-    <div className="filters__group">
-      <h3 className="filters__label">{title}</h3>
+    <details className="filters__group" open={defaultOpen}>
+      <summary className="filters__label">
+        <span className="filters__group-title">{title}</span>
+        {typeof optionCount === 'number' ? (
+          <span className="filters__group-count">
+            {formatNumber(optionCount)}
+            <span className="visually-hidden"> options</span>
+          </span>
+        ) : null}
+      </summary>
       <ul className="filters__options">{children}</ul>
-    </div>
+    </details>
   );
 }
 
