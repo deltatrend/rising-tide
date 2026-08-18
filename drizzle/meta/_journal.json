@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1786998466836,
+      "tag": "0000_public_robbie_robertson",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786998513747,
+      "tag": "0001_fast_red_skull",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787000505355,
+      "tag": "0002_swift_pandemic",
+      "breakpoints": true
+    }
+  ]
+}

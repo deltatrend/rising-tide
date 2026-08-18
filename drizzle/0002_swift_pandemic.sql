@@ -1,0 +1,1 @@
+ALTER TABLE "classification_overrides" ADD COLUMN "cleared_reason" text;

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/sync-legiscan",
+      "schedule": "0 9 * * *"
+    }
+  ],
+  "functions": {
+    "app/api/cron/sync-legiscan/route.ts": {
+      "maxDuration": 300
+    }
+  }
+}
